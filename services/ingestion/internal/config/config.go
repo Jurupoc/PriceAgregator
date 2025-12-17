@@ -9,6 +9,7 @@ type Config struct {
 	DBUser              string
 	DBPassword          string
 	Interval            time.Duration
+	GRPCPort            string
 }
 
 type ConfigProvider interface {
@@ -23,11 +24,12 @@ type configProvider struct{}
 
 func (cp configProvider) Load() Config {
 	return Config{
-		CoinGeckoAPIKey:     mustEnv("COINGECKO_API_KEY"),
-		CoinMarketCapAPIKey: mustEnv("COIN_MARKET_CAP_API_KEY"),
-		DBHost:              mustEnv("DB_HOST"),
-		DBUser:              mustEnv("DB_USER"),
-		DBPassword:          mustEnv("DB_PASSWORD"),
-		Interval:            mustDuration("FETCH_INTERVAL", 5*time.Minute),
+		CoinGeckoAPIKey:     optionalEnv("COINGECKO_API_KEY", ""),
+		CoinMarketCapAPIKey: optionalEnv("COIN_MARKET_CAP_API_KEY", ""),
+		DBHost:              optionalEnv("DB_HOST", ""),
+		DBUser:              optionalEnv("DB_USER", ""),
+		DBPassword:          optionalEnv("DB_PASSWORD", ""),
+		Interval:            mustDuration("FETCH_INTERVAL", 30*time.Second),
+		GRPCPort:            optionalEnv("GRPC_PORT", "50051"),
 	}
 }

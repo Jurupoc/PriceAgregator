@@ -8,4 +8,27 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    ports:
+      - "50051:50051"
     restart: unless-stopped
+    networks:
+      - price-aggregator-network
+
+  api-gateway:
+    container_name: price-aggregator-api-gateway
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ingestion
+    restart: unless-stopped
+    networks:
+      - price-aggregator-network
+
+networks:
+  price-aggregator-network:
+    driver: bridge

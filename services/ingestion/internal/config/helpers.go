@@ -14,6 +14,13 @@ func mustEnv(key string) string {
 	return v
 }
 
+func optionalEnv(key string, defaultValue string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultValue
+}
+
 func mustDuration(key string, def time.Duration) time.Duration {
 	if v := os.Getenv(key); v != "" {
 		d, err := time.ParseDuration(v)

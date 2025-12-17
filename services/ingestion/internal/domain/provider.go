@@ -1,27 +1,16 @@
 package domain
 
 import (
-	"net/http"
-	"github.com/Jurupoc/PriceAgregator/ingestion/internal/config"
+	"context"
 )
 
+// PriceProvider define a interface comum para todos os providers de preço
+type PriceProvider interface {
+	Name() string
+	FetchPrices(ctx context.Context) ([]PriceSnapshot, error)
+}
+
+// DataProvider mantido para compatibilidade durante refatoração
 type DataProvider interface {
 	FetchPrice() (*PriceData, error)
-}
-
-type provider struct {
-	config config.Config
-	client http.Client
-}
-
-func NewDataProvider(cf config.ConfigProvider, cl http.Client) DataProvider {
-	config := cf.Load()
-	return &provider{
-		config: config,
-		client: cl,
-	}
-}
-
-func (i *provider) FetchPrice() (*PriceData, error) {
-	return nil, nil
 }

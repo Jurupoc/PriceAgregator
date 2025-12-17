@@ -1,0 +1,25 @@
+# GraphQL schema location
+schema:
+  - graph/schema.graphqls
+
+# Where the generated code should go
+exec:
+  filename: graph/generated.go
+  package: graph
+
+# Where resolvers should go
+resolver:
+  layout: follow-schema
+  dir: graph
+  package: graph
+
+# Optional: turn on use ` + "`" + ` + "`" + `go run` + "`" + ` to invoke gqlgen
+# autobind:
+#   - "github.com/Jurupoc/PriceAgregator/api-gateway/graph/model"
+
+# Optional: turn on to skip generation of ComplexityRoot struct content and Complexity function
+# omit_complexity: false
+
+# Optional: turn on to skip generation of TaggedFields
+# omit_tagged_fields: false
+

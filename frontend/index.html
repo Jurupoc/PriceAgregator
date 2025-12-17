@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Aggregator - Preços de Criptomoedas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            color: #667eea;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status.error {
+            color: #ff6b6b;
+        }
+
+        .status.success {
+            color: #51cf66;
+        }
+
+        .prices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .price-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .price-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .price-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .symbol {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .source {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .price {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .timestamp {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin-top: 50px;
+        }
+
+        .empty {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Price Aggregator</h1>
+            <p class="subtitle">Preços agregados de múltiplos providers</p>
+        </header>
+
+        <div class="controls">
+            <button id="fetchBtn" onclick="fetchPrices()">🔄 Atualizar Preços</button>
+            <button id="autoRefreshBtn" onclick="toggleAutoRefresh()">⏸️ Pausar Auto-refresh</button>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div id="pricesContainer">
+            <div class="loading">Carregando preços...</div>
+        </div>
+    </div>
+
+    <script>
+        const GRAPHQL_URL = 'http://localhost:8080/query';
+        let autoRefreshInterval = null;
+        let isAutoRefreshing = false;
+
+        async function fetchPrices() {
+            const statusEl = document.getElementById('status');
+            const containerEl = document.getElementById('pricesContainer');
+            const fetchBtn = document.getElementById('fetchBtn');
+
+            fetchBtn.disabled = true;
+            statusEl.textContent = 'Buscando preços...';
+            statusEl.className = 'status';
+
+            const query = `
+                query {
+                    prices {
+                        symbol
+                        priceUSD
+                        source
+                        timestamp
+                    }
+                }
+            `;
+
+            try {
+                const response = await fetch(GRAPHQL_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.errors) {
+                    throw new Error(result.errors[0].message);
+                }
+
+                const prices = result.data.prices;
+                displayPrices(prices);
+
+                statusEl.textContent = `✅ ${prices.length} preços carregados com sucesso`;
+                statusEl.className = 'status success';
+            } catch (error) {
+                console.error('Error fetching prices:', error);
+                statusEl.textContent = `❌ Erro ao buscar preços: ${error.message}`;
+                statusEl.className = 'status error';
+                containerEl.innerHTML = '<div class="empty">Não foi possível carregar os preços. Verifique se o servidor está rodando.</div>';
+            } finally {
+                fetchBtn.disabled = false;
+            }
+        }
+
+        function displayPrices(prices) {
+            const containerEl = document.getElementById('pricesContainer');
+
+            if (prices.length === 0) {
+                containerEl.innerHTML = '<div class="empty">Nenhum preço disponível no momento.</div>';
+                return;
+            }
+
+            containerEl.innerHTML = '<div class="prices-grid"></div>';
+            const gridEl = containerEl.querySelector('.prices-grid');
+
+            prices.forEach(price => {
+                const card = document.createElement('div');
+                card.className = 'price-card';
+
+                const date = new Date(price.timestamp);
+                const formattedDate = date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                card.innerHTML = `
+                    <div class="price-card-header">
+                        <span class="symbol">${price.symbol}</span>
+                        <span class="source">${price.source}</span>
+                    </div>
+                    <div class="price">$${formatPrice(price.priceUSD)}</div>
+                    <div class="timestamp">Atualizado: ${formattedDate}</div>
+                `;
+
+                gridEl.appendChild(card);
+            });
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(price);
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+
+            if (isAutoRefreshing) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                isAutoRefreshing = false;
+                btn.textContent = '▶️ Iniciar Auto-refresh';
+            } else {
+                autoRefreshInterval = setInterval(fetchPrices, 5000);
+                isAutoRefreshing = true;
+                btn.textContent = '⏸️ Pausar Auto-refresh';
+                fetchPrices();
+            }
+        }
+
+        // Carrega preços ao carregar a página
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchPrices();
+        });
+    </script>
+</body>
+</html>
+

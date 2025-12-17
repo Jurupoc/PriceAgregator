@@ -1,0 +1,11 @@
+type Price {
+  symbol: String!
+  priceUSD: Float!
+  source: String!
+  timestamp: String!
+}
+
+type Query {
+  prices: [Price!]!
+}
+

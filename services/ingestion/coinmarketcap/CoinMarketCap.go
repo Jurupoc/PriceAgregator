@@ -1,82 +1,70 @@
 package coinmarketcap
 
 import (
-	"encoding/json"
-	"io"
-	"log"
-	"net/http"
+	"context"
 	"time"
 
-	"github.com/samber/lo"
-
-	"github.com/Jurupoc/PriceAgregator/ingestion/internal/config"
 	"github.com/Jurupoc/PriceAgregator/ingestion/internal/domain"
 )
 
-type coinMarketCapProvider struct {
-	config config.Config
-	client http.Client
+const (
+	ProviderName = "CoinMarketCap"
+)
+
+// CoinMarketCapProvider implementa PriceProvider com dados mockados
+type CoinMarketCapProvider struct{}
+
+// NewCoinMarketCapProvider cria uma nova instância do provider CoinMarketCap
+func NewCoinMarketCapProvider() domain.PriceProvider {
+	return &CoinMarketCapProvider{}
 }
 
-func NewCoinMarketCapProvider(cf config.ConfigProvider, cl http.Client) domain.DataProvider {
-	config := cf.Load()
-	return &coinMarketCapProvider{
-		config: config,
-		client: cl,
-	}
+// Name retorna o nome do provider
+func (p *CoinMarketCapProvider) Name() string {
+	return ProviderName
 }
 
-func (i *coinMarketCapProvider) FetchPrice() (*domain.PriceData, error) {
-	var result *domain.PriceData
-
-	req, err := http.NewRequest(http.MethodGet, COIN_MARKET_CAP_API_URL+COIN_MARKETCAP_API_ENDPOINT, nil)
-	if err != nil {
-		log.Fatal("Error creating request", err)
-		return result, err
-	}
-	req.Header.Add(COIN_MARKET_CAP_API_KEY_HEADER, i.config.CoinMarketCapAPIKey)
-
-	q := req.URL.Query()
-	q.Add("limit", "5")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := i.client.Do(req)
-	if err != nil {
-		log.Fatal("Error sending request", err)
-		return result, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal("Error reading response body:", err)
-		return result, err
+// FetchPrices retorna dados mockados de preços de criptomoedas
+func (p *CoinMarketCapProvider) FetchPrices(ctx context.Context) ([]domain.PriceSnapshot, error) {
+	// Simula um pequeno delay de rede
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(50 * time.Millisecond):
 	}
 
-	var response PriceDataResponse
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		log.Fatal("Error unmarshalling response body:", err)
-		return result, err
-	}
-	if response.Status.ErrorCode != nil {
-		log.Fatalf("CoinMarketCap API returned error code: %d, message: %s",
-			*response.Status.ErrorCode,
-			lo.FromPtr(response.Status.ErrorMessage),
-		)
-	}
-	log.Printf("CoinMarketCap response: %+v \n", response)
-
-	result = converToPriceData(response.Data[0])
-
-	return result, nil
-}
-
-func converToPriceData(coinData CryptoAsset) *domain.PriceData {
-	return &domain.PriceData{
-		Name:       coinData.Name,
-		Symbol:     coinData.Symbol,
-		RetrieveAt: time.Now(),
-		UsdPrice:   coinData.Quote["USD"].Price,
-	}
+	// Dados mockados consistentes (valores ligeiramente diferentes do CoinGecko para simular diferenças entre providers)
+	now := time.Now()
+	return []domain.PriceSnapshot{
+		{
+			Symbol:    "BTC",
+			PriceUSD:  43280.25,
+			Source:    ProviderName,
+			Timestamp: now,
+		},
+		{
+			Symbol:    "ETH",
+			PriceUSD:  2652.10,
+			Source:    ProviderName,
+			Timestamp: now,
+		},
+		{
+			Symbol:    "BNB",
+			PriceUSD:  315.80,
+			Source:    ProviderName,
+			Timestamp: now,
+		},
+		{
+			Symbol:    "SOL",
+			PriceUSD:  98.90,
+			Source:    ProviderName,
+			Timestamp: now,
+		},
+		{
+			Symbol:    "ADA",
+			PriceUSD:  0.525,
+			Source:    ProviderName,
+			Timestamp: now,
+		},
+	}, nil
 }

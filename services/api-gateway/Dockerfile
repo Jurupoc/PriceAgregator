@@ -17,24 +17,34 @@ ENV PATH="${PATH}:/root/go/bin"
 
 WORKDIR /app
 
+# Copia go.mod e go.sum
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Gera código gRPC
-COPY proto/ proto/
+# Gera código gRPC do proto
+COPY proto/price.proto ./proto/
 RUN mkdir -p proto/gen/price && \
 	protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		proto/price.proto
 
+# Copia o resto do código
 COPY . .
-RUN go build -o ingestion ./cmd/ingestion
+
+# Gera código GraphQL
+RUN go run github.com/99designs/gqlgen generate
+
+# Build da aplicação
+RUN go build -o gateway ./cmd/gateway
 
 # -------- Runtime stage --------
 FROM alpine:3.19
 
 WORKDIR /app
 
-COPY --from=builder /app/ingestion ./ingestion
+COPY --from=builder /app/gateway ./gateway
 
-ENTRYPOINT ["./ingestion"]
+EXPOSE 8080
+
+ENTRYPOINT ["./gateway"]
+

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package price;
+
+option go_package = "github.com/Jurupoc/PriceAgregator/ingestion/proto/gen/price";
+
+// Serviço de preços
+service PriceService {
+  // Retorna os últimos preços coletados
+  rpc GetLatestPrices(Empty) returns (PriceList);
+}
+
+// Mensagem vazia para requisições sem parâmetros
+message Empty {}
+
+// Lista de preços
+message PriceList {
+  repeated Price prices = 1;
+}
+
+// Representa um snapshot de preço
+message Price {
+  string symbol = 1;
+  double price_usd = 2;
+  string source = 3;
+  int64 timestamp = 4; // Unix timestamp em segundos
+}
+
